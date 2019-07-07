@@ -19,14 +19,21 @@ const photos = photosUtil.getPhotos(dir);
 console.log(photos);
 
 const photoReel = document.getElementById('photo-reel');
+photoReel.innerHTML = '';
 
 for (const photo of photos) {
 	const img = document.createElement('img');
 	img.src = path.format(photo);
 	img.id = 'photo-preview';
-	img.title = path.join(photo.name, photo.ext);
+	img.title = decodeURI(photo.name); // remove %20 for spaces
 	img.addEventListener('click', event => updateMainPhoto(event));
 	photoReel.appendChild(img);
+
+	if (photo !== photos[photos.length]) {
+		const hr = document.createElement('hr');
+		hr.className = 'divider';
+		photoReel.appendChild(hr);
+	}
 }
 
 function updateMainPhoto(imgElement) {
@@ -35,9 +42,11 @@ function updateMainPhoto(imgElement) {
 	const img = document.createElement('img');
 	img.src = path.format(photo);
 	img.id = 'photo';
-	img.title = path.join(photo.name, photo.ext);
+	img.title = decodeURI(photo.name); // remove %20 for spaces
 
 	const photoView = document.getElementById('photo-view');
 	photoView.innerHTML = '';
 	photoView.appendChild(img);
+
+	document.title = `Face API Testing - ${img.title}`;
 }
