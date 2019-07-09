@@ -44,7 +44,7 @@ Promise.all([
 	console.log("Database is finished building.");
 	console.log(labeledFaceDescriptors);
 	// The lower the threshold the better
-	faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.4);
+	faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
 });
 
 async function detectFaces(img) {
