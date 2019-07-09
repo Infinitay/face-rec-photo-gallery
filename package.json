@@ -1,6 +1,6 @@
 {
   "name": "face-api-testing",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -11,6 +11,13 @@
   "license": "ISC",
   "devDependencies": {
     "electron": "^5.0.6",
+    "electron-rebuild": "^1.8.5",
     "eslint": "^6.0.1"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^1.2.3",
+    "canvas": "^2.5.0",
+    "face-api.js": "^0.20.1",
+    "rollup": "^1.16.6"
   }
 }

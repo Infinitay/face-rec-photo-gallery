@@ -1,16 +1,9 @@
-/* const photoReel = document.getElementById('photo-reel');
-	for (let x = 0; x < 100; x++) {
-		const bullet = document.createElement('li')
-		bullet.id = 'photo-preview'
-		bullet.appendChild(document.createTextNode(`${x + 1}`))
-		photoReel.appendChild(bullet)
-	} */
-
 const {
 	ipcRenderer
 } = require('electron');
 
 const photosUtil = require('./photos');
+const faceUtil = require('./face-rec');
 const path = require('path');
 
 const dir = ipcRenderer.sendSync('get-photo-directory');
@@ -26,7 +19,7 @@ for (const photo of photos) {
 	img.src = path.format(photo);
 	img.id = 'photo-preview';
 	img.title = decodeURI(photo.name); // remove %20 for spaces
-	img.addEventListener('click', event => updateMainPhoto(event));
+	img.addEventListener('click', event => updateMainPhoto(path.format(photo)));
 	photoReel.appendChild(img);
 
 	if (photo !== photos[photos.length]) {
@@ -36,11 +29,11 @@ for (const photo of photos) {
 	}
 }
 
-function updateMainPhoto(imgElement) {
-	const photo = path.parse(imgElement.target.src);
+function updateMainPhoto(imgPath) {
+	const photo = path.parse(imgPath);
 
 	const img = document.createElement('img');
-	img.src = path.format(photo);
+	img.src = imgPath;
 	img.id = 'photo';
 	img.title = decodeURI(photo.name); // remove %20 for spaces
 
@@ -49,4 +42,10 @@ function updateMainPhoto(imgElement) {
 	photoView.appendChild(img);
 
 	document.title = `Face API Testing - ${img.title}`;
+
+	img.onload = () => {
+		faceUtil.detectFaces(img).then(res => {
+			console.log(`Done updating main photo and detecting face(s)!`);
+		});
+	};
 }
