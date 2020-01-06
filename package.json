@@ -1,11 +1,12 @@
 {
-	"name": "face-api-testing",
-	"version": "2.0.3",
+	"name": "facial-rec-photo-gallery",
+	"version": "2.1.0",
 	"description": "",
 	"main": "main.js",
 	"scripts": {
-		"start": "electron . --enable-logging",
-		"postinstall": "electron-rebuild -f"
+		"start": "electron .",
+		"postinstall": "electron-rebuild -f",
+		"debug": "electron . --enable-logging"
 	},
 	"keywords": [],
 	"author": "",

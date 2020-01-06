@@ -19,7 +19,7 @@ for (const photo of photos) {
 	img.src = path.format(photo);
 	img.id = 'photo-preview';
 	img.title = decodeURI(photo.name); // remove %20 for spaces
-	img.addEventListener('click', event => updateMainPhoto(path.format(photo)));
+	img.addEventListener('click', () => updateMainPhoto(path.format(photo)));
 	photoReel.appendChild(img);
 
 	if (photo !== photos[photos.length]) {
@@ -44,7 +44,7 @@ function updateMainPhoto(imgPath) {
 	document.title = `Face API Testing - ${img.title}`;
 
 	img.onload = () => {
-		faceUtil.detectFaces(img).then(res => {
+		faceUtil.detectFaces(img).then(() => {
 			console.log(`Done updating main photo and detecting face(s)!`);
 		});
 	};
