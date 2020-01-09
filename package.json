@@ -1,6 +1,6 @@
 {
 	"name": "facial-rec-photo-gallery",
-	"version": "2.1.0",
+	"version": "2.2.0",
 	"description": "",
 	"main": "main.js",
 	"scripts": {
@@ -19,7 +19,6 @@
 	"dependencies": {
 		"@tensorflow/tfjs-node": "^1.5.1",
 		"canvas": "^2.6.1",
-		"face-api.js": "^0.22.0",
-		"rollup": "^1.27.14"
+		"face-api.js": "^0.22.0"
 	}
 }

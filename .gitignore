@@ -1,2 +1,4 @@
 node_modules
+.VSCodeCounter
 assets/data-set
+assets/LBF Database.json
