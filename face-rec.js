@@ -30,22 +30,21 @@ const path = require('path');
 const {
 	ipcRenderer
 } = require('electron');
+const bd = document.getElementById('building-database');
+const DATABASE_PATH = `./assets/LBF Database.json`;
 let faceMatcher;
 
+faceRecLogger("Loading models...");
+
 Promise.all([
-	faceapi.nets.faceRecognitionNet.loadFromUri('./assets/models'),
-	faceapi.nets.faceLandmark68Net.loadFromUri('./assets/models'),
-	faceapi.nets.ssdMobilenetv1.loadFromUri('./assets/models')
+	faceapi.nets.faceRecognitionNet.loadFromDisk('./assets/models'),
+	faceapi.nets.faceLandmark68Net.loadFromDisk('./assets/models'),
+	faceapi.nets.ssdMobilenetv1.loadFromDisk('./assets/models')
 ]).then(async () => {
-	const bd = document.getElementById('building-database');
-	bd.innerHTML = "Models are done loading.";
-	console.log("Models are done loading.");
-	bd.innerHTML = "Building database...";
-	const labeledFaceDescriptors = await buildDatabase();
-	bd.innerHTML = "Database is finished building.";
+	faceRecLogger("Successfully loaded models.");
+	const labeledFaceDescriptors = await fetchDatabase();
+	faceRecLogger("Successfully loaded database.");
 	bd.remove();
-	console.log("Database is finished building.");
-	console.log(labeledFaceDescriptors);
 	// The lower the threshold the better
 	faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
 });
@@ -74,9 +73,48 @@ async function detectFaces(img) {
 	});
 }
 
-function buildDatabase() {
-	console.log("Building database...");
-	const dataSetLocation = ipcRenderer.sendSync('get-data-set-directory') ? ipcRenderer.sendSync('get-data-set-directory') : './assets/test-data-set';
+// Labeled Face Descriptor I/O: https://github.com/justadudewhohacks/face-api.js/pull/397#issuecomment-526847142
+async function fetchDatabase() {
+	faceRecLogger("Loading database...");
+	const dataSetLocation = ipcRenderer.send('get-data-set-directory') ? ipcRenderer.send('get-data-set-directory') : './assets/test-data-set';
+	const dataSetLastModified = getLastModifiedDateSync(dataSetLocation);
+	if (fs.existsSync(DATABASE_PATH)) {
+		// lbfDatabase file structure -> json file
+		/**
+		 * {
+		 *	"lastModified": epoch in ms (BigInt),
+		 *	"labeledFaceDescriptors": [Array (Labeled Face Descriptors)]
+		 * }
+		 */
+		const lbfDatabase = JSON.parse(fs.readFileSync(DATABASE_PATH));
+		console.log(`Found existing database file, last modified on: ${new Date(lbfDatabase.lastModified).toLocaleString()}.`);
+		if (lbfDatabase.lastModified == dataSetLastModified) {
+			faceRecLogger("Loading existing database...");
+			return lbfDatabase.labeledFaceDescriptors.map(x => faceapi.LabeledFaceDescriptors.fromJSON(x));
+		} else {
+			faceRecLogger("Existing database is out-of-date, re-building database...");
+			return await buildDatabase(dataSetLocation, dataSetLastModified);
+		}
+	} else {
+		faceRecLogger("Building database...");
+		return await buildDatabase(dataSetLocation, dataSetLastModified);
+	}
+}
+
+async function buildDatabase(dataSetLocation, dataSetLastModified) {
+	const labeledFaceDescriptors = await buildLabeledFaceDescriptors(dataSetLocation);
+	const labeledFaceDescriptorsJSON = labeledFaceDescriptors.map(x => x.toJSON());
+	const databaseJSON = {
+		lastModified: dataSetLastModified,
+		labeledFaceDescriptors: labeledFaceDescriptorsJSON
+	};
+	fs.writeFileSync(DATABASE_PATH, JSON.stringify(databaseJSON, null, 4));
+	faceRecLogger("Successfully built the database.");
+	return labeledFaceDescriptors;
+}
+
+function buildLabeledFaceDescriptors(dataSetLocation) {
+	console.log("Building labeled face descriptors...");
 	const subjects = fs.readdirSync(dataSetLocation);
 
 	return Promise.all(
@@ -92,6 +130,15 @@ function buildDatabase() {
 			console.log(descriptions);
 			return new faceapi.LabeledFaceDescriptors(subject, descriptions);
 		}));
+}
+
+function faceRecLogger(log) {
+	bd.innerHTML = log;
+	console.log(log);
+}
+
+function getLastModifiedDateSync(_path) {
+	return fs.statSync(_path).mtimeMs;
 }
 
 module.exports = {

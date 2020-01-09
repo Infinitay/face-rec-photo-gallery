@@ -30,6 +30,8 @@ With the addition of the "postinstall" script within `package.json` this should 
 
 Follow instructions for [electron-rebuild](https://electronjs.org/docs/tutorial/using-native-node-modules). For me, since I am on windows, I ran the following  `./node_modules/.bin/electron-rebuild`. With the addition of the "postinstall" script, this should no longer happen. However, should the case still arise, the instructions above still works.
 
+You could also try running `npm rebuild canvas --update-binary` alone.
+
 ---
 
 ## TFJS Errors, specified module could not be found... tfjs_binding.node
