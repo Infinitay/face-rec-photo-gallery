@@ -5,6 +5,8 @@ const {
 	ipcMain
 } = require('electron');
 
+const WINDOW_TITLE = `Facial Recognition Photo Gallery v${process.env.npm_package_version}`;
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
@@ -15,8 +17,9 @@ function createWindow() {
 		width: 800,
 		height: 600,
 		webPreferences: {
-			nodeIntegration: true,
+			nodeIntegration: true
 		},
+		title: WINDOW_TITLE
 	});
 
 	win.setMenu(null);
@@ -40,18 +43,37 @@ function createWindow() {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
-	const directory = dialog.showOpenDialogSync(win, {
+
+	const dataSetDirectory = dialog.showOpenDialogSync(win, {
+		title: 'Select the data-set directory for build the database model',
+		properties: ['openDirectory', 'multiSelections']
+	});
+
+	if (dataSetDirectory) {
+		console.log(`Selected data-set directory: ${dataSetDirectory}`);
+	} else {
+		console.log(`Didn't select a data-set directory, using default directory ('./assets/data-set')`);
+	}
+
+	const photoDirectory = dialog.showOpenDialogSync(win, {
+		title: 'Select the directory containing photos to view',
 		properties: ['openDirectory']
 	});
 
-	console.log(directory);
-
-	if (directory) {
+	if (photoDirectory) {
+		console.log(`Selected directory: ${photoDirectory}`);
 		createWindow();
+	} else {
+		console.log(`Didn't select a photo direction`);
+		app.quit();
 	}
 
+	ipcMain.on('get-data-set-directory', event => {
+		event.returnValue = dataSetDirectory;
+	});
+
 	ipcMain.on('get-photo-directory', (event) => {
-		event.returnValue = directory;
+		event.returnValue = photoDirectory;
 	});
 });
 

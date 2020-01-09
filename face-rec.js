@@ -27,6 +27,9 @@ faceapi.env.monkeyPatch({
 
 const fs = require('fs');
 const path = require('path');
+const {
+	ipcRenderer
+} = require('electron');
 let faceMatcher;
 
 Promise.all([
@@ -54,7 +57,7 @@ async function detectFaces(img) {
 		height: img.height
 	};
 
-	const overlay = await faceapi.createCanvasFromMedia(img);
+	const overlay = faceapi.createCanvasFromMedia(img);
 	overlay.setAttribute('id', 'face-rec-overlay');
 	photoView.appendChild(overlay);
 	const detectedFaces = await faceapi.detectAllFaces(img).withFaceLandmarks().withFaceDescriptors();
@@ -65,7 +68,7 @@ async function detectFaces(img) {
 	recognizedFaces.forEach((recFace, recFaceIndex) => {
 		const box = resizedDetectedFaces[recFaceIndex].detection.box;
 		const drawBox = new faceapi.draw.DrawBox(box, {
-			label: recFace.toString(),
+			label: recFace.toString()
 		});
 		drawBox.draw(overlay);
 	});
@@ -73,7 +76,7 @@ async function detectFaces(img) {
 
 function buildDatabase() {
 	console.log("Building database...");
-	const dataSetLocation = './assets/test-data-set';
+	const dataSetLocation = ipcRenderer.sendSync('get-data-set-directory') ? ipcRenderer.sendSync('get-data-set-directory') : './assets/test-data-set';
 	const subjects = fs.readdirSync(dataSetLocation);
 
 	return Promise.all(
