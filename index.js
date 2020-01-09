@@ -41,7 +41,7 @@ function updateMainPhoto(imgPath) {
 	photoView.innerHTML = '';
 	photoView.appendChild(img);
 
-	document.title = `Face API Testing - ${img.title}`;
+	document.title = `${ipcRenderer.sendSync('get-window-title')} - ${img.title}`;
 
 	img.onload = () => {
 		faceUtil.detectFaces(img).then(() => {

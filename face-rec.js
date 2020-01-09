@@ -72,11 +72,20 @@ async function detectFaces(img) {
 		drawBox.draw(overlay);
 	});
 }
-
+/**
+ * TODO
+ * Don't rebuild the entire database, instead build on need-by-need basis
+ * if subject A folder is modified, rebuild that and place it back into the db
+ * that way lots of resources won't be utilized and the time for rebuilding would decrease
+ *
+ * Properly handle get-data-set-directory where it returns an array of paths instead of one path
+ *
+ * Make sure line 130 checks if its a directory
+ */
 // Labeled Face Descriptor I/O: https://github.com/justadudewhohacks/face-api.js/pull/397#issuecomment-526847142
 async function fetchDatabase() {
 	faceRecLogger("Loading database...");
-	const dataSetLocation = ipcRenderer.send('get-data-set-directory') ? ipcRenderer.send('get-data-set-directory') : './assets/test-data-set';
+	const dataSetLocation = ipcRenderer.sendSync('get-data-set-directory') ? ipcRenderer.sendSync('get-data-set-directory')[0] : './assets/test-data-set';
 	const dataSetLastModified = getLastModifiedDateSync(dataSetLocation);
 	if (fs.existsSync(DATABASE_PATH)) {
 		// lbfDatabase file structure -> json file
@@ -115,7 +124,7 @@ async function buildDatabase(dataSetLocation, dataSetLastModified) {
 
 function buildLabeledFaceDescriptors(dataSetLocation) {
 	console.log("Building labeled face descriptors...");
-	const subjects = fs.readdirSync(dataSetLocation);
+	const subjects = fs.readdirSync(dataSetLocation).filter(subject => fs.readdirSync(path.join(dataSetLocation, subject)).length);
 
 	return Promise.all(
 		subjects.map(async subject => {
@@ -123,8 +132,13 @@ function buildLabeledFaceDescriptors(dataSetLocation) {
 			for (const photo of fs.readdirSync(path.join(dataSetLocation, subject))) {
 				const img = await faceapi.fetchImage(path.join(dataSetLocation, subject, photo));
 				console.log(`Building data from ${path.join(dataSetLocation, subject, photo)}`);
-				const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-				descriptions.push(detections.descriptor);
+				try {
+					const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+					descriptions.push(detections.descriptor);
+				} catch (error) {
+					console.warn(`Couldn't build descriptor from ${path.join(dataSetLocation, subject, photo)}!`);
+					console.warn(error);
+				}
 			}
 			console.log(`Finished building descriptions for ${subject}`);
 			console.log(descriptions);

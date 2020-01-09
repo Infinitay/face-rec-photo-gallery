@@ -75,6 +75,10 @@ app.on('ready', () => {
 	ipcMain.on('get-photo-directory', (event) => {
 		event.returnValue = photoDirectory;
 	});
+
+	ipcMain.on('get-window-title', event => {
+		event.returnValue = WINDOW_TITLE;
+	});
 });
 
 // Quit when all windows are closed.
