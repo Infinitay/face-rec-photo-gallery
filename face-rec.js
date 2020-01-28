@@ -28,8 +28,10 @@ faceapi.env.monkeyPatch({
 const fs = require('fs');
 const path = require('path');
 const {
-	ipcRenderer
+	ipcRenderer,
+	remote
 } = require('electron');
+
 const bd = document.getElementById('building-database');
 const DATABASE_PATH = `./assets/LBF Database.json`;
 let faceMatcher;
@@ -46,7 +48,7 @@ Promise.all([
 	faceRecLogger("Successfully loaded database.");
 	bd.remove();
 	// The lower the threshold the better
-	faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
+	faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.7);
 });
 
 async function detectFaces(img) {
@@ -86,7 +88,8 @@ async function detectFaces(img) {
 async function fetchDatabase() {
 	faceRecLogger("Loading database...");
 	const dataSetLocation = ipcRenderer.sendSync('get-data-set-directory') ? ipcRenderer.sendSync('get-data-set-directory')[0] : './assets/test-data-set';
-	const dataSetLastModified = getLastModifiedDateSync(dataSetLocation);
+	const dataSetLastModified = getNestedLastModifiedDateSync(dataSetLocation);
+	// TODO: THROW ERROR IF THERE IS NOT NESTED FOLDERS BECAUSE THERE HAS TO BE FOR DATASETLOCATION!
 	if (fs.existsSync(DATABASE_PATH)) {
 		// lbfDatabase file structure -> json file
 		/**
@@ -99,7 +102,17 @@ async function fetchDatabase() {
 		console.log(`Found existing database file, last modified on: ${new Date(lbfDatabase.lastModified).toLocaleString()}.`);
 		if (lbfDatabase.lastModified == dataSetLastModified) {
 			faceRecLogger("Loading existing database...");
-			return lbfDatabase.labeledFaceDescriptors.map(x => faceapi.LabeledFaceDescriptors.fromJSON(x));
+			const shouldRebuildDatabase = remote.dialog.showMessageBoxSync({
+				'title': `${ipcRenderer.sendSync('get-window-title')} - Database`,
+				'message': `Found existing database file, last modified on: ${new Date(lbfDatabase.lastModified).toLocaleString()}. Would you like to use this prebuilt database? If not, the database will be rebuilt and overwritten.`,
+				'buttons': ['Use Existing Database', 'Rebuild Database'] // returns 0, 1
+			});
+			if (!shouldRebuildDatabase) {
+				return lbfDatabase.labeledFaceDescriptors.map(x => faceapi.LabeledFaceDescriptors.fromJSON(x));
+			} else {
+				faceRecLogger("Existing database is out-of-date, re-building database...");
+				return await buildDatabase(dataSetLocation, dataSetLastModified);
+			}
 		} else {
 			faceRecLogger("Existing database is out-of-date, re-building database...");
 			return await buildDatabase(dataSetLocation, dataSetLastModified);
@@ -129,9 +142,11 @@ function buildLabeledFaceDescriptors(dataSetLocation) {
 	return Promise.all(
 		subjects.map(async subject => {
 			const descriptions = [];
-			for (const photo of fs.readdirSync(path.join(dataSetLocation, subject))) {
+			let count = 1;
+			const subjectDir = fs.readdirSync(path.join(dataSetLocation, subject));
+			for (const photo of subjectDir) {
 				const img = await faceapi.fetchImage(path.join(dataSetLocation, subject, photo));
-				console.log(`Building data from ${path.join(dataSetLocation, subject, photo)}`);
+				console.log(`Building data from ${path.join(dataSetLocation, subject, photo)} [${count++}/${subjectDir.length}]`);
 				try {
 					const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
 					descriptions.push(detections.descriptor);
@@ -153,6 +168,18 @@ function faceRecLogger(log) {
 
 function getLastModifiedDateSync(_path) {
 	return fs.statSync(_path).mtimeMs;
+}
+
+function getNestedLastModifiedDateSync(_path) {
+	let lastModified;
+	const dirs = fs.readdirSync(_path, {
+		withFileTypes: true
+	}).filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
+	for (let dir of dirs) {
+		const tempLastModified = getLastModifiedDateSync(path.join(_path, dir));
+		lastModified = lastModified < tempLastModified ? lastModified : tempLastModified;
+	}
+	return lastModified;
 }
 
 module.exports = {
