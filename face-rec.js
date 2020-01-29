@@ -25,6 +25,7 @@ faceapi.env.monkeyPatch({
 });
 // https://github.com/justadudewhohacks/face-api.js/issues/157#issuecomment-443507577
 
+const utils = require('./my-utils.js');
 const fs = require('fs');
 const path = require('path');
 const {
@@ -33,7 +34,8 @@ const {
 } = require('electron');
 
 const bd = document.getElementById('building-database');
-const DATABASE_PATH = `./assets/LBF Database.json`;
+const DB_PATH = `./assets/LBF Database.json`;
+const COMPRESSED_DB_PATH = `./assets/LBF Database.json.gz`;
 let faceMatcher;
 
 faceRecLogger("Loading models...");
@@ -88,9 +90,9 @@ async function detectFaces(img) {
 async function fetchDatabase() {
 	faceRecLogger("Loading database...");
 	const dataSetLocation = ipcRenderer.sendSync('get-data-set-directory') ? ipcRenderer.sendSync('get-data-set-directory')[0] : './assets/test-data-set';
-	const dataSetLastModified = getNestedLastModifiedDateSync(dataSetLocation);
+	const dataSetLastModified = utils.getNestedLastModifiedDateSync(dataSetLocation);
 	// TODO: THROW ERROR IF THERE IS NOT NESTED FOLDERS BECAUSE THERE HAS TO BE FOR DATASETLOCATION!
-	if (fs.existsSync(DATABASE_PATH)) {
+	if (fs.existsSync(COMPRESSED_DB_PATH)) {
 		// lbfDatabase file structure -> json file
 		/**
 		 * {
@@ -98,7 +100,7 @@ async function fetchDatabase() {
 		 *	"labeledFaceDescriptors": [Array (Labeled Face Descriptors)]
 		 * }
 		 */
-		const lbfDatabase = JSON.parse(fs.readFileSync(DATABASE_PATH));
+		const lbfDatabase = await utils.decompressDatabaseToJSON();
 		console.log(`Found existing database file, last modified on: ${new Date(lbfDatabase.lastModified).toLocaleString()}.`);
 		if (lbfDatabase.lastModified == dataSetLastModified) {
 			faceRecLogger("Loading existing database...");
@@ -130,7 +132,7 @@ async function buildDatabase(dataSetLocation, dataSetLastModified) {
 		lastModified: dataSetLastModified,
 		labeledFaceDescriptors: labeledFaceDescriptorsJSON
 	};
-	fs.writeFileSync(DATABASE_PATH, JSON.stringify(databaseJSON, null, 4));
+	await utils.compressDatabaseFromJSON(databaseJSON);
 	faceRecLogger("Successfully built the database.");
 	return labeledFaceDescriptors;
 }
@@ -164,22 +166,6 @@ function buildLabeledFaceDescriptors(dataSetLocation) {
 function faceRecLogger(log) {
 	bd.innerHTML = log;
 	console.log(log);
-}
-
-function getLastModifiedDateSync(_path) {
-	return fs.statSync(_path).mtimeMs;
-}
-
-function getNestedLastModifiedDateSync(_path) {
-	let lastModified;
-	const dirs = fs.readdirSync(_path, {
-		withFileTypes: true
-	}).filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
-	for (let dir of dirs) {
-		const tempLastModified = getLastModifiedDateSync(path.join(_path, dir));
-		lastModified = lastModified < tempLastModified ? lastModified : tempLastModified;
-	}
-	return lastModified;
 }
 
 module.exports = {
