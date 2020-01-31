@@ -5,8 +5,8 @@ const {
 } = require('googleapis');
 
 const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
-const TOKEN_PATH = './assets/google/token.json';
-const OAUTH = require('./assets/google/oauth2-config.json');
+const TOKEN_PATH = './assets/google/token.json'; // Only require 1 '.' since it will be read by fs
+const OAUTH = require('../assets/google/oauth2-config.json');
 
 const oauth2Client = new google.auth.OAuth2(
 	OAUTH.clientId,
@@ -16,6 +16,7 @@ const oauth2Client = new google.auth.OAuth2(
 
 // getAccessToken(oauth2Client, scrape);
 
+// Only one '.' in path because of fs
 fs.readFile('./assets/google/credentials.json', (err, content) => {
 	if (err) return console.log('Error loading client secret file:', err);
 	// Authorize a client with credentials, then call the Google Drive API.
