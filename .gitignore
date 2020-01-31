@@ -1,5 +1,8 @@
 node_modules
 .VSCodeCounter
+/assets/google/*
 assets/data-set
 assets/LBF Database.json
 assets/LBF Database.json.gz
+build/
+testing/*notes.txt
