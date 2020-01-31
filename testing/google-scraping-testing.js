@@ -6,7 +6,7 @@ const {
 
 const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 const TOKEN_PATH = './assets/google/token.json';
-const OAUTH = require('./assets/google/OAuth2 Config.json');
+const OAUTH = require('./assets/google/oauth2-config.json');
 
 const oauth2Client = new google.auth.OAuth2(
 	OAUTH.clientId,
