@@ -6,7 +6,8 @@
 	"scripts": {
 		"start": "electron .",
 		"postinstall": "electron-rebuild -f",
-		"debug": "electron . --enable-logging"
+		"debug": "electron . --enable-logging",
+		"test-scrape-database": "electron ./testing/scrape-build-database-testing.js"
 	},
 	"keywords": [],
 	"author": "",

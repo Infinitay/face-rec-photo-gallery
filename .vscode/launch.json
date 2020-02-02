@@ -31,7 +31,20 @@
 			"port": 9223,
 			"webRoot": "${workspaceFolder}",
 			"timeout": 30000
-		}
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug scrape-database",
+			"runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+			"args": [
+				"./testing/scrape-build-database-testing.js"
+			],
+			"windows": {
+				"runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+			},
+			"outputCapture": "std"
+		},
 	],
 	"compounds": [
 		{
