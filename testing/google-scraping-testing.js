@@ -21,7 +21,8 @@ fs.readFile('./assets/google/credentials.json', (err, content) => {
 	if (err) return console.log('Error loading client secret file:', err);
 	// Authorize a client with credentials, then call the Google Drive API.
 	// authorize(JSON.parse(content), scrapeDrive);
-	authorize(JSON.parse(content), scrapeSheet)
+	// authorize(JSON.parse(content), scrapeSheet);
+	// authorize(JSON.parse(content), scrapeDriveFaceAPI);
 });
 
 /**
@@ -78,20 +79,61 @@ async function getAccessToken(oAuth2Client, callback) {
 	});
 }
 
+async function scrapeDriveFaceAPI(auth) {
+	const drive = google.drive({
+		version: 'v3',
+		auth: auth
+	});
+
+	let res = await drive.files.list({
+		// q: `'1s4QGfIgFXetVA9LExwjilSdTY4ysqC36' in parents and mimeType = 'application/vnd.google-apps.folder'`,
+		// q: `'1Tri2ajaUm4YksE84sqEqmMChUSCJpKU7' in parents and (name contains 'Gimpo' or name contains 'GMP') and (name contains 'Incheon' or name contains 'ICN')`
+		q: `'1ESHQYeRfMcUaFCxSgPkePy9eXGtzV9QN' in parents and mimeType contains 'image/'`
+	});
+	// log(JSON.stringify(res.data, null, 4));
+	let file = res.data.files[0];
+	file = await drive.files.get({
+		fileId: file.id,
+		alt: 'media'
+	});
+	return file.data;
+}
+
+module.exports = {
+	auth: () => {
+		const {
+			client_secret,
+			client_id,
+			redirect_uris
+		} = JSON.parse(fs.readFileSync('./assets/google/credentials.json')).installed;
+		const oAuth2Client = new google.auth.OAuth2(
+			client_id, client_secret, redirect_uris[0]);
+
+		// Check if we have previously stored a token.
+		const token = fs.readFileSync(TOKEN_PATH);
+		if (token == undefined) {
+			console.error('Token error, run again without scrape-build-database-testing');
+		} else {
+			oAuth2Client.setCredentials(JSON.parse(token));
+			return oAuth2Client;
+		}
+	}
+}
 
 async function scrapeDrive(auth) {
 	const drive = google.drive({
 		version: 'v3',
-		auth: auth,
+		auth: auth
 	});
 	let parseFiles = [];
 	let files = [];
 
 	let res = await drive.files.list({
 		// q: `'1s4QGfIgFXetVA9LExwjilSdTY4ysqC36' in parents and mimeType = 'application/vnd.google-apps.folder'`,
-		q: `'1Tri2ajaUm4YksE84sqEqmMChUSCJpKU7' in parents and (name contains 'Gimpo' or name contains 'GMP') and (name contains 'Incheon' or name contains 'ICN')`
+		// q: `'1Tri2ajaUm4YksE84sqEqmMChUSCJpKU7' in parents and (name contains 'Gimpo' or name contains 'GMP') and (name contains 'Incheon' or name contains 'ICN')`
+		q: `'1ESHQYeRfMcUaFCxSgPkePy9eXGtzV9QN' in parents and mimeType contains 'image/'`
 	});
-	log(res.data);
+	log(JSON.stringify(res.data, null, 4));
 	/* parseFiles = res.data.files.map(folder => folder.id);
 	for (let nestedFolder of parseFiles) {
 		let nestedRes = await drive.files.list({
@@ -104,13 +146,13 @@ async function scrapeDrive(auth) {
 async function scrapeSheet(auth) {
 	const sheetsApi = google.sheets({
 		version: 'v4',
-		auth: auth,
+		auth: auth
 	});
 
 	const spreadsheetIds = ['1ZJw_TcUnMVDfcYo6SRssM-zCmFUiUAM2XfCLl6oj5rc', '128qKdqfKLLSWN8YBQTDRsTNPK1WEugN5cAz1hyRVTj8'];
 	for (const spreadsheetId of spreadsheetIds) {
 		let res = await sheetsApi.spreadsheets.get({
-			spreadsheetId: spreadsheetId,
+			spreadsheetId: spreadsheetId
 		});
 		log(`Scrapping through ${res.data.properties.title} spreadsheet...`);
 		let sheets = res.data.sheets.map(sheet => {
@@ -118,8 +160,8 @@ async function scrapeSheet(auth) {
 				'sheetId': sheet.properties.sheetId,
 				'title': sheet.properties.title.trim(),
 				'rows': sheet.properties.gridProperties.rowCount,
-				'columns': sheet.properties.gridProperties.columnCount,
-			}
+				'columns': sheet.properties.gridProperties.columnCount
+			};
 		});
 		// log(sheets);
 
@@ -158,6 +200,7 @@ async function scrapeSheet(auth) {
 // https://stackoverflow.com/a/53678158/7835042
 function toLetter(n) {
 	n = n - 1; // Makes it so that everything starts at 1, since Google Sheets row and col start at 1
+	let a;
 	return (a = Math.floor(n / 26)) >= 0 ? toLetter(a - 1) + String.fromCharCode(65 + (n % 26)) : '';
 }
 
